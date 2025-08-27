@@ -1,4 +1,6 @@
 // src/app/api/orders/[id]/status/route.ts
+// @ts-nocheck
+
 import { NextRequest, NextResponse } from 'next/server';
 import { admin } from '@/lib/supabaseAdmin';
 

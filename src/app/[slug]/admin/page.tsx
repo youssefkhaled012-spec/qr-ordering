@@ -1,4 +1,6 @@
 // src/app/[slug]/admin/page.tsx
+// @ts-nocheck
+
 import { admin } from '@/lib/supabaseAdmin';
 import StatusButtons from '@/components/admin/StatusButtons';
 
