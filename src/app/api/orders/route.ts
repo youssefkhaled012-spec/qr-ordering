@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+// src/app/api/orders/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { admin } from '@/lib/supabaseAdmin';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { tableCode, items } = await req.json() as {
+    const { tableCode, items } = (await req.json()) as {
       tableCode: string;
       items: { item_id: string; quantity: number; price_cents: number }[];
     };
@@ -12,52 +13,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing tableCode or items' }, { status: 400 });
     }
 
-    // 1) First restaurant (MVP)
-    const { data: restaurant, error: rErr } = await supabase
+    const { data: restaurant, error: rErr } = await admin
       .from('restaurants')
       .select('*')
       .limit(1)
       .single();
-    if (rErr || !restaurant) {
-      return NextResponse.json({ error: 'No restaurant configured' }, { status: 400 });
-    }
+    if (rErr || !restaurant) return NextResponse.json({ error: 'No restaurant' }, { status: 400 });
 
-    // 2) Find table by code
-    const { data: table, error: tErr } = await supabase
+    const { data: table, error: tErr } = await admin
       .from('tables')
       .select('*')
       .eq('restaurant_id', restaurant.id)
       .eq('code', tableCode)
       .single();
-    if (tErr || !table) {
-      return NextResponse.json({ error: 'Table not found' }, { status: 404 });
-    }
+    if (tErr || !table) return NextResponse.json({ error: 'Table not found' }, { status: 404 });
 
-    // 3) Create order
-    const { data: order, error: oErr } = await supabase
+    const { data: order, error: oErr } = await admin
       .from('orders')
-      .insert({
-        restaurant_id: restaurant.id,
-        table_id: table.id,
-        status: 'pending',
-      })
+      .insert({ restaurant_id: restaurant.id, table_id: table.id, status: 'pending' })
       .select('*')
       .single();
-    if (oErr || !order) {
-      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
-    }
+    if (oErr || !order) return NextResponse.json({ error: 'Create order failed' }, { status: 500 });
 
-    // 4) Insert order items
     const rows = items.map(it => ({
       order_id: order.id,
       item_id: it.item_id,
       quantity: it.quantity,
       price_cents: it.price_cents,
     }));
-    const { error: oiErr } = await supabase.from('order_items').insert(rows);
-    if (oiErr) {
-      return NextResponse.json({ error: 'Failed to create order items' }, { status: 500 });
-    }
+    const { error: oiErr } = await admin.from('order_items').insert(rows);
+    if (oiErr) return NextResponse.json({ error: 'Create order items failed' }, { status: 500 });
 
     return NextResponse.json({ ok: true, order_id: order.id }, { status: 201 });
   } catch (e: any) {
