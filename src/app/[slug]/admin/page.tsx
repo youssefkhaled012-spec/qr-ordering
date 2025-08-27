@@ -57,7 +57,8 @@ export default async function AdminPage({ params }: Props) {
     .order('created_at', { ascending: false })
     .limit(50);
 
-  const orders = ordersRaw as OrderRow[]; // cast to a safe shape (no "any")
+  const orders = ((ordersRaw ?? []) as unknown) as OrderRow[];
+
 
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-4">
